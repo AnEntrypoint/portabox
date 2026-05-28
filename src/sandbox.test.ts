@@ -260,11 +260,40 @@ describe.skipIf(!haveWebix)("Sandbox over webix (in-browser microVM)", () => {
     expect(typeof snap.snapshotId).toBe("string");
   });
 
-  it("throws NotSupported for networking (NOSOCK)", () => {
+  it("has no public port domains (self-contained, no remote network)", () => {
     expect(() => sandbox.domain(3000)).toThrow();
   });
 
   it("throws NotSupported for Sandbox.list (no remote registry)", async () => {
     await expect(Sandbox.list()).rejects.toBeInstanceOf(NotSupportedError);
+  });
+
+  it("reports threaded/sockets/framebuffer capabilities", async () => {
+    const caps = await sandbox.capabilities();
+    expect(caps.framebuffer).toBe(true);
+    expect(caps.threads).toBe(true);
+    expect(caps.sockets).toBe(true);
+    // fork is impossible under emscripten; pipelines therefore false.
+    expect(caps.fork).toBe(false);
+    expect(caps.pipelines).toBe(false);
+  });
+
+  it("displayInfo is null until a guest registers a framebuffer", async () => {
+    expect(await sandbox.displayInfo()).toBeNull();
+  });
+
+  it("pushInput -> guest drains the events via the input device", async () => {
+    // Push events into the ring, then run the inputtest ELF which drains them
+    // via syscall 0x5fc and exits with the event count.
+    const inputElf = join(WEBIX, "inputtest.elf");
+    if (!existsSync(inputElf)) return; // older webix without the proof ELF
+    expect(await sandbox.pushInput({ type: "key", code: 65, down: 1 })).toBe(true);
+    await sandbox.pushInput({ type: "motion", x: 10, y: 20 });
+    await sandbox.writeFiles([
+      { path: "/inputtest", content: new Uint8Array(readFileSync(inputElf)), mode: 0o755 },
+    ]);
+    const r = await sandbox.runCommand("/inputtest", []);
+    expect(r.exitCode).toBe(2); // two events drained
+    expect(await r.stdout()).toMatch(/type=1 code=65 value=1/);
   });
 });

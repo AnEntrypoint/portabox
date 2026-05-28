@@ -517,6 +517,40 @@ export class WebixApiClient {
     this.host.restore(s.blink);
   }
 
+  // ── Display + input (in-browser framebuffer device) ────────────────────
+
+  /** Attach a canvas to the guest framebuffer (rAF blit + input forwarding). */
+  async attachDisplay(canvas: unknown, opts?: { fpsCap?: number }) {
+    await this.ensureBooted();
+    return this.host.attachDisplay(canvas, opts);
+  }
+
+  /** Push one input event (key/mouse) into the guest input device. */
+  async pushInput(evt: {
+    type: "key" | "motion" | "button";
+    code?: number;
+    button?: number;
+    x?: number;
+    y?: number;
+    down?: number;
+    value?: number;
+  }): Promise<boolean> {
+    await this.ensureBooted();
+    return this.host.pushInput(evt);
+  }
+
+  /** Current framebuffer geometry, or null if no guest registered one. */
+  async displayInfo() {
+    await this.ensureBooted();
+    return this.host.fbInfo();
+  }
+
+  /** Capability flags of the running Blink build. */
+  async capabilities() {
+    await this.ensureBooted();
+    return this.host.capabilities;
+  }
+
   // ── Listing ────────────────────────────────────────────────────────────
 
   async listSessions() {

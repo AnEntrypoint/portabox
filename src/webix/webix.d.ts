@@ -41,9 +41,40 @@ interface BlinkCore {
   capabilities: {
     tarMount: boolean;
     nodefs: boolean;
-    nosock: boolean;
+    sockets: boolean;
+    threads: boolean;
+    sharedMemory: boolean;
+    pipe: boolean;
+    pipelines: boolean;
+    fork: boolean;
+    framebuffer: boolean;
+    jit: boolean;
     vectorISA: string;
   };
+  fbInfo(): {
+    vaddr: number;
+    width: number;
+    height: number;
+    stride: number;
+    generation: number;
+  } | null;
+  fbView(): {
+    pixels: Uint8ClampedArray;
+    width: number;
+    height: number;
+    stride: number;
+    generation: number;
+  } | null;
+  pushInput(evt: {
+    type: "key" | "motion" | "button";
+    code?: number;
+    button?: number;
+    x?: number;
+    y?: number;
+    down?: number;
+    value?: number;
+  }): boolean;
+  inputPending(): number;
   mountTarBytes(tarBytes: Uint8Array, onError?: (m: string, e: Error) => void): void;
   mountNodeDir(hostDir: string, guestDir?: string): string;
   persistDir(guestDir?: string): Promise<string>;
@@ -99,4 +130,12 @@ declare module "webix/blink-browser" {
     wasmBinary?: Uint8Array;
     [k: string]: unknown;
   }): Promise<BlinkCore>;
+}
+
+declare module "webix/display" {
+  export function attachDisplay(
+    host: unknown,
+    canvas: unknown,
+    opts?: { fpsCap?: number },
+  ): { stats: () => unknown; stop: () => void };
 }

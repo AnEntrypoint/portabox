@@ -4,9 +4,11 @@
  * One WebixHost backs one Sandbox: the Blink WASM owns the CPU/MMU/syscalls and
  * an in-memory Linux filesystem (MEMFS), so all of a sandbox's commands and file
  * operations share persistent state through the lifetime of the host. There is
- * no network — this is a self-contained, in-browser microVM (the Blink build is
- * NOSOCK: `socket(AF_INET)` returns ENOSYS), so ports/dev-servers/domains are
- * unavailable by construction.
+ * no remote network — this is a self-contained, in-browser microVM, so
+ * remote ports/dev-servers/public domains are unavailable by construction.
+ * The portabox build additionally exposes a framebuffer + input device (see
+ * fbView/attachDisplay/pushInput) and is threaded + sockets-enabled (socket()
+ * works in-process); fork() remains absent (emscripten limitation).
  */
 
 export interface WebixHostOptions {
@@ -110,6 +112,13 @@ export class WebixHost {
       const { createBlinkHostBrowser } = await import("webix/blink-browser");
       this.core = await createBlinkHostBrowser({ wasmUrl, glueUrl });
     } else {
+      // The threaded (-pthread) emscripten glue references the worker-scope
+      // global `self` at module-eval time; on Node's main thread that is
+      // undefined. Shim it to globalThis so the threaded artifact loads under
+      // Node (the pthread pool spawns real worker_threads that set their own
+      // scope). Harmless on the single-thread build.
+      const g = globalThis as { self?: unknown };
+      if (typeof g.self === "undefined") g.self = globalThis;
       const { createBlinkHost } = await import("webix/blink");
       this.core = await createBlinkHost({
         wasmPath: this.opts.wasmPath ?? wasmUrl.replace(/^\//, ""),
@@ -188,6 +197,70 @@ export class WebixHost {
       throw new Error("webix: busybox not present in rootfs");
     }
     return this.runElf({ path: this.busyboxHandle }, argv);
+  }
+
+  /**
+   * Framebuffer geometry the guest published via syscall 0x5fb, or null if no
+   * guest has registered a framebuffer yet.
+   */
+  fbInfo(): {
+    vaddr: number;
+    width: number;
+    height: number;
+    stride: number;
+    generation: number;
+  } | null {
+    return (this.ensureCore() as any).fbInfo?.() ?? null;
+  }
+
+  /**
+   * Zero-copy view over the guest framebuffer (re-derived each call; safe
+   * against ALLOW_MEMORY_GROWTH detach). Null until a guest registers one.
+   */
+  fbView(): { pixels: Uint8ClampedArray; width: number; height: number; stride: number; generation: number } | null {
+    return (this.ensureCore() as any).fbView?.() ?? null;
+  }
+
+  /**
+   * Attach a canvas to the live framebuffer via webix's display module: a rAF
+   * blit loop that paints guest pixels and forwards canvas key/mouse events
+   * into the guest input device. Returns a controller with stats()/stop().
+   */
+  async attachDisplay(
+    canvas: unknown,
+    opts?: { fpsCap?: number },
+  ): Promise<{ stats: () => unknown; stop: () => void }> {
+    const core = this.ensureCore();
+    const { attachDisplay } = (await import("webix/display")) as {
+      attachDisplay: (
+        host: unknown,
+        canvas: unknown,
+        opts?: { fpsCap?: number },
+      ) => { stats: () => unknown; stop: () => void };
+    };
+    return attachDisplay(core, canvas, opts);
+  }
+
+  /**
+   * Push one input event into the guest input ring (host -> guest). Event
+   * shape: { type: "key"|"motion"|"button", code?, button?, x?, y?, down? }.
+   * Returns false if the running wasm predates the input device.
+   */
+  pushInput(evt: {
+    type: "key" | "motion" | "button";
+    code?: number;
+    button?: number;
+    x?: number;
+    y?: number;
+    down?: number;
+    value?: number;
+  }): boolean {
+    return (this.ensureCore() as any).pushInput?.(evt) ?? false;
+  }
+
+  /** Capability flags of the running Blink build. */
+  get capabilities(): Record<string, unknown> {
+    return (this.ensureCore() as any).capabilities ?? {};
   }
 
   snapshot() {

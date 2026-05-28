@@ -882,6 +882,74 @@ export class Sandbox {
   }
 
   /**
+   * Attach an HTML canvas to this sandbox's framebuffer. Starts a
+   * requestAnimationFrame loop that blits the guest's RGBA framebuffer
+   * (published via the in-guest display producer) zero-copy to the canvas, and
+   * forwards canvas keyboard/mouse events into the guest input device.
+   *
+   * Self-contained in-browser backend only: there is no remote display.
+   *
+   * @param canvas - An HTMLCanvasElement to paint into.
+   * @param opts.fpsCap - Max paint rate (default 60).
+   * @returns A controller with `stats()` and `stop()`.
+   *
+   * @example
+   * const sandbox = await Sandbox.create();
+   * await sandbox.runCommand("/usr/bin/Xfbdev", [":0"], { detached: true });
+   * const display = await sandbox.attachDisplay(document.querySelector("canvas"));
+   * // ... later: display.stop();
+   */
+  async attachDisplay(
+    canvas: unknown,
+    opts?: { fpsCap?: number },
+  ): Promise<{ stats: () => unknown; stop: () => void }> {
+    const client = await this.ensureClient();
+    return client.attachDisplay(canvas, opts);
+  }
+
+  /**
+   * Push a single input event into the guest input device (host -> guest).
+   *
+   * @param evt - `{ type: "key"|"motion"|"button", code?, button?, x?, y?, down? }`.
+   * @returns `false` if the running wasm predates the input device.
+   */
+  async pushInput(evt: {
+    type: "key" | "motion" | "button";
+    code?: number;
+    button?: number;
+    x?: number;
+    y?: number;
+    down?: number;
+    value?: number;
+  }): Promise<boolean> {
+    const client = await this.ensureClient();
+    return client.pushInput(evt);
+  }
+
+  /**
+   * Current framebuffer geometry the guest published, or `null` if none yet.
+   */
+  async displayInfo(): Promise<{
+    vaddr: number;
+    width: number;
+    height: number;
+    stride: number;
+    generation: number;
+  } | null> {
+    const client = await this.ensureClient();
+    return client.displayInfo();
+  }
+
+  /**
+   * Capability flags of the running Blink build (threads, sockets, framebuffer,
+   * pipe, fork, vectorISA, ...).
+   */
+  async capabilities(): Promise<Record<string, unknown>> {
+    const client = await this.ensureClient();
+    return client.capabilities();
+  }
+
+  /**
    * Stop the sandbox.
    *
    * @param opts - Optional parameters.
