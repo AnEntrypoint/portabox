@@ -1,4 +1,4 @@
-# @anentrypoint/sandbox
+# portabox
 
 Run a real x86_64 Linux userspace **entirely in the browser (or Node)** — no
 server, no network, no credentials. Commands execute as real x86_64 ELF binaries
@@ -9,7 +9,7 @@ in-memory filesystem.
 The API mirrors the `Sandbox` surface familiar from `@vercel/sandbox` (which
 this is derived from — see `NOTICE.md`), but the backend is fully self-contained.
 
-**[▶ Live demo](https://anentrypoint.github.io/sandbox/)** — boots a Linux
+**[▶ Live demo](https://anentrypoint.github.io/portabox/)** — boots a Linux
 microVM in your browser tab and runs commands live.
 
 ![demo](browser-demo/demo-screenshot.png)
@@ -17,13 +17,13 @@ microVM in your browser tab and runs commands live.
 ## Install
 
 ```sh
-npm install @anentrypoint/sandbox
+npm install portabox
 ```
 
 ## Quick start
 
 ```ts
-import { Sandbox } from "@anentrypoint/sandbox";
+import { Sandbox } from "portabox";
 
 const sandbox = await Sandbox.create();
 

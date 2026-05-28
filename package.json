@@ -1,5 +1,5 @@
 {
-  "name": "@anentrypoint/sandbox",
+  "name": "portabox",
   "version": "0.1.2",
   "description": "Self-contained sandbox SDK: run a real x86_64 Linux userspace in the browser or Node, with no server and no network — backed by the webix Blink WASM emulator.",
   "type": "module",
@@ -37,10 +37,10 @@
     "blink",
     "microvm"
   ],
-  "homepage": "https://github.com/AnEntrypoint/sandbox#readme",
+  "homepage": "https://github.com/AnEntrypoint/portabox#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AnEntrypoint/sandbox.git"
+    "url": "git+https://github.com/AnEntrypoint/portabox.git"
   },
   "license": "Apache-2.0",
   "dependencies": {

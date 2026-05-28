@@ -1,6 +1,6 @@
 # NOTICE
 
-`@anentrypoint/sandbox` is a self-contained, in-browser sandbox SDK.
+`portabox` is a self-contained, in-browser sandbox SDK.
 
 ## Derivation
 

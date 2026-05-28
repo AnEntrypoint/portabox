@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="data:," />
-  <title>@anentrypoint/sandbox — in-browser x86_64 Linux microVM</title>
+  <title>portabox — in-browser x86_64 Linux microVM</title>
   <link rel="preload" href="./containers/blinkenlib.wasm" as="fetch" type="application/wasm" crossorigin />
   <script type="importmap">
   {
     "imports": {
-      "@anentrypoint/sandbox": "./dist/index.js",
+      "portabox": "./dist/index.js",
       "zod": "./vendor/zod.js",
       "webix/blink-browser": "./webix/x86_64-blink-browser.js",
       "webix/blink-core": "./webix/blink-core.js",
@@ -36,13 +36,13 @@
 </head>
 <body>
   <header>
-    <h1>@anentrypoint/sandbox <span id="status" class="badge booting">booting…</span></h1>
+    <h1>portabox <span id="status" class="badge booting">booting…</span></h1>
     <div class="sub">A self-contained x86_64 Linux userspace (Blink WASM) running entirely in this tab — no server, no Vercel.</div>
   </header>
   <div id="console"></div>
 
   <script type="module">
-    import { Sandbox } from "@anentrypoint/sandbox";
+    import { Sandbox } from "portabox";
 
     const consoleEl = document.getElementById("console");
     const statusEl = document.getElementById("status");

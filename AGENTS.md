@@ -1,6 +1,6 @@
 # Agents
 
-`@anentrypoint/sandbox` is a self-contained, in-browser x86_64 Linux sandbox SDK.
+`portabox` is a self-contained, in-browser x86_64 Linux sandbox SDK.
 Commands run as real ELF binaries inside a WASM module (the
 [webix](https://github.com/AnEntrypoint/webix) Blink emulator) — there is no
 server, no network, and no remote backend.
