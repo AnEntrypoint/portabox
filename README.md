@@ -1,7 +1,7 @@
 # portabox
 
 Run a real x86_64 Linux userspace **entirely in the browser (or Node)** — no
-server, no network, no credentials. Commands execute as real x86_64 ELF binaries
+server, no remote network, no credentials. Commands execute as real x86_64 ELF binaries
 inside a WASM module via [webix](https://github.com/AnEntrypoint/webix), a
 Blink-backed emulator that owns the CPU, MMU, ~150 Linux syscalls, and an
 in-memory filesystem.
@@ -63,22 +63,45 @@ In Node, pass `wasmPath` / `gluePath` filesystem paths.
 `sandbox.snapshot()` captures byte-exact WASM memory + registers. Keep the
 returned `Snapshot`; restore is handled by the live host.
 
+## Display + input
+
+The Blink build exposes an in-guest framebuffer + input device, so a sandbox
+can drive an HTML canvas with no remote display:
+
+- `await sandbox.attachDisplay(canvas, { fpsCap })` — start a
+  requestAnimationFrame loop that blits the guest's RGBA framebuffer zero-copy
+  to the canvas and forwards canvas keyboard/mouse events into the guest input
+  device. Returns `{ stats(), stop() }`.
+- `await sandbox.pushInput({ type: "key"|"motion"|"button", code?, button?, x?, y?, down? })`
+  — push a single input event (host -> guest).
+- `await sandbox.displayInfo()` — framebuffer geometry, or `null` until a guest
+  registers one.
+- `await sandbox.capabilities()` — runtime flags
+  (`{ threads, sockets, framebuffer, pipe, pipelines, fork, vectorISA, ... }`).
+
+A guest program registers its framebuffer via a synthetic syscall; any fbdev
+program (or a framebuffer X server) drives the canvas this way.
+
 ## What is not available
 
-Because the Blink build is `NOSOCK` (no TCP/UDP — `socket(AF_INET)` returns
-`ENOSYS`) and single-threaded, and because there is no remote account registry,
-the following throw `NotSupportedError`:
+There is no remote account registry and no remote/public network, so the
+following throw `NotSupportedError`:
 
-- **Networking**: `sandbox.domain(port)`, exposed `ports`, dev servers,
-  `updateNetworkPolicy`.
+- **Public network / port exposure**: `sandbox.domain(port)`, exposed `ports`,
+  dev servers reachable from outside the page, `updateNetworkPolicy`. (The
+  guest's own `socket()` is implemented — sockets are enabled — but there is no
+  tunnel to the public internet from the in-page sandbox.)
 - **Remote registry**: `Sandbox.get`, `Sandbox.getOrCreate`, `Sandbox.fork`,
   `Sandbox.list`, `Snapshot.get` / `Snapshot.list` / `Snapshot.tree`. A
   sandbox exists only within the page/process that created it.
 - **Sources**: `create({ source: { type: "git" | "tarball" | "snapshot" } })`.
   Seed files with `writeFiles()` instead.
 
-Other build-flag limits inherited from Blink: AVX/AVX-512 raise `SIGILL`
-(SSE2 only); `pthread_create` is unavailable (single-threaded).
+Build-flag characteristics inherited from Blink: the build is **threaded**
+(`-pthread`, SharedArrayBuffer — needs cross-origin isolation / COOP+COEP at
+serve time) and **sockets-enabled**. `fork()` is unavailable (emscripten has no
+real process creation), so shell pipelines (`sh -c 'a | b'`) do not run. AVX/
+AVX-512 raise `SIGILL` (SSE2 only). There is no JIT (impossible under wasm32).
 
 ## Browser support
 
