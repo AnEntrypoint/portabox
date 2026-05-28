@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}
 
 # Allow committing the version bump, deploying Pages, and OIDC for Pages.
 permissions:
