@@ -20,3 +20,4 @@ browser-demo/vendor/
 .DS_Store
 .gm/browser-profile/
 .gm/browser-profile-*/
+.claude/
