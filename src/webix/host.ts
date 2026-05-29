@@ -74,9 +74,39 @@ function stripBlinkPrompt(stdout: string, argv: string[]): string {
   return stdout;
 }
 
+/** Versioned Cache API bucket for the multi-MB rootfs/wasm assets. Bump the
+ * suffix when the asset format changes to invalidate stale entries. */
+const ASSET_CACHE = "webix-assets-v1";
+
+/**
+ * Fetch the same-origin asset bytes, served from the Cache API on repeat loads.
+ * The rootfs tarball is multi-MB; caching it means the first paint pays the
+ * network cost once and every subsequent page load reads it from disk cache
+ * with no network round-trip. Falls back to a plain fetch where the Cache API
+ * is unavailable (older browsers, non-secure contexts).
+ */
+async function fetchResponse(url: string): Promise<Response> {
+  if (typeof caches !== "undefined") {
+    try {
+      const cache = await caches.open(ASSET_CACHE);
+      const hit = await cache.match(url);
+      if (hit) return hit;
+      const res = await fetch(url);
+      if (res.ok) {
+        // Cache a clone; the original is consumed by the caller.
+        await cache.put(url, res.clone());
+      }
+      return res;
+    } catch {
+      // Cache API can throw in opaque/insecure contexts — fall through.
+    }
+  }
+  return fetch(url);
+}
+
 async function fetchBytes(url: string): Promise<Uint8Array> {
   if (isBrowser) {
-    const res = await fetch(url);
+    const res = await fetchResponse(url);
     if (!res.ok) {
       throw new Error(
         `webix: failed to fetch ${url} (HTTP ${res.status}). The wasm must be served with Content-Type: application/wasm.`,
