@@ -1,5 +1,8 @@
 node_modules/
-dist/
+# dist/ is committed: consumers install portabox as a git dependency, and the
+# prepare build can't emit .d.ts in pnpm's devDep-less prepare env (tsdown
+# silently skips dts without typescript). Shipping a prebuilt dist guarantees
+# types + JS for git-dep installs. Rebuild with `pnpm build` before committing.
 
 # Assembled browser-demo artifacts (reproduced by browser-demo/build-demo.mjs)
 browser-demo/dist/
@@ -15,9 +18,9 @@ browser-demo/vendor/
 .gm/
 
 # misc
-.env*
 .vercel
 .DS_Store
 .gm/browser-profile/
 .gm/browser-profile-*/
 .claude/
+config.bat
